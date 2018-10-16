@@ -81,8 +81,10 @@ def update_list_of_last_n_points(event, current_data, data_cols, length_limit):
             if len(append_list) > length_limit:
                 append_list = append_list[1:]
             new_data[col] = append_list
-        else: new_data[col] = event[col]
+        else:
+            new_data[col] = event[col]
     return new_data
+
 
 def initial_dynamo_record(event, data_cols):
     '''
@@ -93,31 +95,39 @@ def initial_dynamo_record(event, data_cols):
     for col in event:
         if col in data_cols:
             newRecord[col] = [newRecord[col]]
-            newRecord["alpha_"+col] = 0
-            newRecord["s1_"+col] = event[col]
-            newRecord["s2_"+col] = math.pow(event[col], 2)
-            newRecord["s1_next_"+col] = newRecord["s1_"+col]
-            newRecord["STD_next_"+col] = math.sqrt(newRecord["s2_"+col] - math.pow(newRecord["s1_"+col], 2))
+            newRecord["alpha_" + col] = 0
+            newRecord["s1_" + col] = event[col]
+            newRecord["s2_" + col] = math.pow(event[col], 2)
+            newRecord["s1_next_" + col] = newRecord["s1_" + col]
+            newRecord["STD_next_" + col] = \
+                math.sqrt(newRecord["s2_" + col] - math.pow(newRecord["s1_" + col], 2))
         else:
             newRecord[col] = newRecord[col]
     return newRecord
 
+
 def generate_pewma(newRecord, event, data_cols, T, alpha_0, beta, threshold):
     for col in data_cols:
         t = len(newRecord[col])
-        newRecord["s1_"+col] = newRecord["s1_next_"+col]
-        newRecord["STD_"+col] = newRecord["STD_next_"+col]
+        newRecord["s1_" + col] = newRecord["s1_next_" + col]
+        newRecord["STD_" + col] = newRecord["STD_next_" + col]
         try:
-            newRecord["Z_"+col] = (event[col]- newRecord["s1_"+col])/newRecord["STD_"+col]
+            newRecord["Z_" + col] = (event[col] - newRecord["s1_" + col]) / newRecord["STD_" + col]
         except ZeroDivisionError:
-            newRecord["Z_"+col] = 0
-        newRecord["P_"+col] = 1/math.sqrt(2*math.pi)*math.exp(-math.pow(newRecord["Z_"+col],2)/2)
-        newRecord["alpha_"+col] = calc_alpha(newRecord, t, T, col, beta, alpha_0)
-        newRecord["s1_"+col] = newRecord["alpha_"+col]*newRecord["s1_"+col] + (1 - newRecord["alpha_"+col] )*event[col]
-        newRecord["s2_"+col] = newRecord["alpha_"+col]*newRecord["s2_"+col] + (1 - newRecord["alpha_"+col] )*math.pow(event[col],2)
-        newRecord["s1_next_"+col] = newRecord["s1_"+col]
-        newRecord["STD_next_"+col] = math.sqrt(newRecord["s2_"+col] - math.pow(newRecord["s1_"+col], 2))
-        isAnomaly = newRecord["P_"+col]  <= threshold
+            newRecord["Z_" + col] = 0
+
+        newRecord["P_" + col] = \
+            1 / math.sqrt(2 * math.pi) * math.exp(-math.pow(newRecord["Z_" + col], 2) / 2)
+        newRecord["alpha_" + col] = \
+            calc_alpha(newRecord, t, T, col, beta, alpha_0)
+        newRecord["s1_" + col] = \
+            newRecord["alpha_" + col] * newRecord["s1_" + col] + (1 - newRecord["alpha_" + col]) * event[col]
+        newRecord["s2_" + col] = \
+            newRecord["alpha_" + col] * newRecord["s2_" + col] + (1 - newRecord["alpha_" + col]) * math.pow(event[col], 2)
+        newRecord["s1_next_" + col] = newRecord["s1_" + col]
+        newRecord["STD_next_" + col] = \
+            math.sqrt(newRecord["s2_" + col] - math.pow(newRecord["s1_" + col], 2))
+        isAnomaly = newRecord["P_" + col] <= threshold
         newRecord[col + "_is_Anomaly"] = isAnomaly
     return newRecord
 
@@ -158,7 +168,7 @@ if __name__ == '__main__':
         "Wind_Velocity_Mtr_Sec": 1.353
     }
 
-    with open('SF36.json') as f:
+    with open('SF36_subset.json') as f:
         data = json.load(f)
     for event in data:
         lambda_handler(event, None)
